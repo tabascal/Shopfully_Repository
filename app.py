@@ -14,6 +14,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Estado global para progreso
 progress = 0
 
+# Función para actualizar el texto de un cuadro de texto en una presentación
+
 
 def update_text_of_textbox(presentation, column_letter, new_text):
     for slide in presentation.slides:
@@ -23,7 +25,24 @@ def update_text_of_textbox(presentation, column_letter, new_text):
                     text_frame = shape.text_frame
                     for paragraph in text_frame.paragraphs:
                         for run in paragraph.runs:
-                            run.text = str(new_text)
+                            run.text = new_text
+
+
+# Streamlit app
+st.title("Aplicación para modificar presentaciones PPTX")
+
+# Sección para que el usuario elija la ruta de guardado
+save_path = st.text_input(
+    "Introduce la ruta donde deseas guardar los archivos PPTX:", value=os.getcwd())
+
+# Botón para guardar la presentación
+if st.button("Guardar presentación"):
+    # Aquí puedes agregar el código para guardar la presentación en la ruta especificada
+    presentation = pptx.Presentation()
+    # ... código para modificar la presentación ...
+    save_file_path = os.path.join(save_path, "presentacion_modificada.pptx")
+    presentation.save(save_file_path)
+    st.success(f"Presentación guardada en: {save_file_path}")
 
 
 def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3):
