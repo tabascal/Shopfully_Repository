@@ -33,19 +33,19 @@ st.title("Aplicación para modificar presentaciones PPTX")
 
 # Sección para que el usuario elija la ruta de guardado
 save_path = st.text_input(
-    "Introduce la ruta donde deseas guardar los archivos PPTX:", value=os.getcwd())
+    "Introduce la ruta donde deseas guardar los archivos PPTX:",
+    value=os.getcwd()  # Ruta predeterminada: directorio actual
+)
 
-# Botón para guardar la presentación
-if st.button("Guardar presentación"):
-    # Aquí puedes agregar el código para guardar la presentación en la ruta especificada
-    presentation = pptx.Presentation()
-    # ... código para modificar la presentación ...
-    save_file_path = os.path.join(save_path, "presentacion_modificada.pptx")
-    presentation.save(save_file_path)
-    st.success(f"Presentación guardada en: {save_file_path}")
+# Verificar si la ruta es válida
+if not os.path.exists(save_path):
+    st.warning(
+        "La ruta de guardado especificada no existe. Se usará el directorio predeterminado.")
+
+# Función para procesar archivos
 
 
-def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3):
+def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3, save_path):
     global progress
 
     # Guardar archivos en la carpeta temporal
@@ -76,7 +76,7 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
                 continue
 
             process_row(ppt_template_path, row, sheet_names, df1, df2, index,
-                        file_name_order_1, file_name_order_2, file_name_order_3)
+                        file_name_order_1, file_name_order_2, file_name_order_3, save_path)
 
             current_row += 1
             progress = int((current_row / total_rows) * 100)
@@ -98,15 +98,17 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             index = row.name
 
             process_row(ppt_template_path, row, sheet_names, df1, df2, index,
-                        file_name_order_1, file_name_order_2, file_name_order_3)
+                        file_name_order_1, file_name_order_2, file_name_order_3, save_path)
 
             current_id += 1
             progress = int((current_id / total_ids) * 100)
             time.sleep(1)
             st.progress(progress / 100)
 
+# Función para procesar una fila y generar un archivo PPTX
 
-def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_order_1, file_name_order_2, file_name_order_3):
+
+def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_order_1, file_name_order_2, file_name_order_3, save_path):
     presentation = pptx.Presentation(presentation_path)
 
     for col_idx, col_name in enumerate(row.index):
@@ -124,37 +126,43 @@ def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_
                 continue
 
     file_name = '_'.join(file_name_parts)
-    output_path = os.path.join(UPLOAD_FOLDER, f"{file_name}.pptx")
+
+    # Usar la ruta proporcionada por el usuario
+    output_path = os.path.join(save_path, f"{file_name}.pptx")
+
     presentation.save(output_path)
 
-    st.success(f"Presentation saved successfully: {file_name}.pptx")
+    st.success(f"Presentación guardada correctamente: {output_path}")
     with open(output_path, "rb") as f:
-        st.download_button(label="Download PPTX", data=f,
+        st.download_button(label="Descargar PPTX", data=f,
                            file_name=f"{file_name}.pptx")
 
 
 # Interfaz de Streamlit
 st.title("PPTX Processor with Streamlit")
 
-ppt_template = st.file_uploader("Upload PPTX Template", type=["pptx"])
-data_file = st.file_uploader("Upload Excel File", type=["xlsx"])
+ppt_template = st.file_uploader("Sube la plantilla PPTX", type=["pptx"])
+data_file = st.file_uploader("Sube el archivo Excel", type=["xlsx"])
 
-search_option = st.radio("Search by:", ["rows", "store_id"])
+search_option = st.radio("Buscar por:", ["rows", "store_id"])
 
 start_row, end_row, store_ids = None, None, None
 if search_option == "rows":
-    start_row = st.number_input("Start Row", min_value=0, step=1)
-    end_row = st.number_input("End Row", min_value=0, step=1)
+    start_row = st.number_input("Fila de inicio", min_value=0, step=1)
+    end_row = st.number_input("Fila de fin", min_value=0, step=1)
 elif search_option == "store_id":
-    store_ids = st.text_input("Enter Store IDs (comma-separated)")
+    store_ids = st.text_input("Introduce los Store IDs (separados por comas)")
 
-file_name_order_1 = st.text_input("File Name Order 1 (Column Index)")
-file_name_order_2 = st.text_input("File Name Order 2 (Column Index)")
-file_name_order_3 = st.text_input("File Name Order 3 (Column Index)")
+file_name_order_1 = st.text_input(
+    "Orden de nombre de archivo 1 (Índice de columna)")
+file_name_order_2 = st.text_input(
+    "Orden de nombre de archivo 2 (Índice de columna)")
+file_name_order_3 = st.text_input(
+    "Orden de nombre de archivo 3 (Índice de columna)")
 
-if st.button("Process"):
+if st.button("Procesar"):
     if ppt_template and data_file:
         process_files(ppt_template, data_file, search_option, start_row, end_row,
-                      store_ids, file_name_order_1, file_name_order_2, file_name_order_3)
+                      store_ids, file_name_order_1, file_name_order_2, file_name_order_3, save_path)
     else:
-        st.error("Please upload both files before processing.")
+        st.error("Por favor, sube ambos archivos antes de procesar.")
