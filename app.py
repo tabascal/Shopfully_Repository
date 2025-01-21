@@ -29,11 +29,11 @@ def update_text_of_textbox(presentation, column_letter, new_text):
 
 
 # Streamlit app
-st.title("Aplicación para modificar presentaciones PPTX")
+st.title("Shopfully Dashboard Generator")
 
 # Sección para que el usuario elija la ruta de guardado
 save_path = st.text_input(
-    "Introduce la ruta donde deseas guardar los archivos PPTX:",
+    "Select the path where the PPTX will be stored:",
     value=os.getcwd()  # Ruta predeterminada: directorio actual
 )
 # Verificar si la ruta es válida
