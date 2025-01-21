@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopfully Dashboard Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const socket = io();
+            socket.on('progress', (data) => {
+                const progressBar = document.getElementById('progress-bar');
+                const progressText = document.getElementById('progress-text');
+                progressBar.style.width = data.progress + '%';
+                progressText.textContent = data.progress + '% completed';
+            });
+        });
+
+        function toggleSearchFields() {
+            var searchOption = document.getElementById('search_option').value;
+            if (searchOption === 'rows') {
+                document.getElementById('row_search_fields').style.display = 'block';
+                document.getElementById('store_id_search_field').style.display = 'none';
+            } else {
+                document.getElementById('row_search_fields').style.display = 'none';
+                document.getElementById('store_id_search_field').style.display = 'block';
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="main-title">Shopfully Dashboard Generator</h1>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <div class="section">
+                <h2>Step 1: Add Files</h2>
+                <label for="ppt_template">PowerPoint Template:</label>
+                <input type="file" id="ppt_template" name="ppt_template" required><br><br>
+                <label for="data_file">Data File:</label>
+                <input type="file" id="data_file" name="data_file" required><br><br>
+            </div>
+            <div class="section">
+                <h2>Step 2: Choose Criteria</h2>
+                <label for="search_option">Search Option:</label>
+                <select id="search_option" name="search_option" onchange="toggleSearchFields()">
+                    <option value="rows">By Rows</option>
+                    <option value="store_id">By Store ID</option>
+                </select><br><br>
+                <div id="row_search_fields">
+                    <label for="start_row">Start Row:</label>
+                    <input type="number" id="start_row" name="start_row"><br><br>
+                    <label for="end_row">End Row:</label>
+                    <input type="number" id="end_row" name="end_row"><br><br>
+                </div>
+                <div id="store_id_search_field" style="display: none;">
+                    <label for="store_id">Store ID(s) (comma-separated):</label>
+                    <input type="text" id="store_id" name="store_id"><br><br>
+                </div>
+            </div>
+            <div class="section">
+                <h2>Step 3: Define File Name</h2>
+                <div class="inline-fields">
+                    <label for="file_name_order_1">Order 1:</label>
+                    <select id="file_name_order_1" name="file_name_order_1">
+                        <option value="">None</option>
+                        <option value="0">Column 1</option>
+                        <option value="1">Column 2</option>
+                        <option value="2">Column 3</option>
+                    </select>
+                    <label for="file_name_order_2">Order 2:</label>
+                    <select id="file_name_order_2" name="file_name_order_2">
+                        <option value="">None</option>
+                        <option value="0">Column 1</option>
+                        <option value="1">Column 2</option>
+                        <option value="2">Column 3</option>
+                    </select>
+                    <label for="file_name_order_3">Order 3:</label>
+                    <select id="file_name_order_3" name="file_name_order_3">
+                        <option value="">None</option>
+                        <option value="0">Column 1</option>
+                        <option value="1">Column 2</option>
+                        <option value="2">Column 3</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" onclick="startProgress()">CREATE PPTX</button>
+        </form>
+        <div id="progress-container" style="display: none;">
+            <h2>Progress</h2>
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
+            <p id="progress-text">0% completed</p>
+        </div>
+        <div id="success-screen" style="display: none;">
+            <h2 style="color: green; font-weight: bold;">Presentations created successfully!</h2>
+        </div>
+    </div>
+    <script>
+        function startProgress() {
+            document.getElementById('progress-container').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
