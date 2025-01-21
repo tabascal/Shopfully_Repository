@@ -36,11 +36,23 @@ save_path = st.text_input(
     "Introduce la ruta donde deseas guardar los archivos PPTX:",
     value=os.getcwd()  # Ruta predeterminada: directorio actual
 )
-
 # Verificar si la ruta es válida
 if not os.path.exists(save_path):
     st.warning(
         "La ruta de guardado especificada no existe. Se usará el directorio predeterminado.")
+    save_path = os.getcwd()
+
+# Botón para guardar la presentación
+if st.button("Guardar presentación"):
+    # Crear la ruta de guardado si no existe
+    os.makedirs(save_path, exist_ok=True)
+
+    # Aquí puedes agregar el código para guardar la presentación en la ruta especificada
+    presentation = pptx.Presentation()
+    # ... código para modificar la presentación ...
+    save_file_path = os.path.join(save_path, "presentacion_modificada.pptx")
+    presentation.save(save_file_path)
+    st.success(f"Presentación guardada en: {save_file_path}")
 
 # Función para procesar archivos
 
