@@ -43,7 +43,7 @@ if not os.path.exists(save_path):
     save_path = os.getcwd()
 
 # Botón para guardar la presentación
-if st.button("Guardar presentación"):
+if st.button("Save Dashboard"):
     # Crear la ruta de guardado si no existe
     os.makedirs(save_path, exist_ok=True)
 
@@ -146,22 +146,22 @@ def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_
 
     st.success(f"Presentación guardada correctamente: {output_path}")
     with open(output_path, "rb") as f:
-        st.download_button(label="Descargar PPTX", data=f,
+        st.download_button(label="Generate PPTX", data=f,
                            file_name=f"{file_name}.pptx")
 
 
 # Interfaz de Streamlit
 st.title("PPTX Processor with Streamlit")
 
-ppt_template = st.file_uploader("Sube la plantilla PPTX", type=["pptx"])
-data_file = st.file_uploader("Sube el archivo Excel", type=["xlsx"])
+ppt_template = st.file_uploader("Upload your pptx template", type=["pptx"])
+data_file = st.file_uploader("Upload your dataset (xlsx)", type=["xlsx"])
 
-search_option = st.radio("Buscar por:", ["rows", "store_id"])
+search_option = st.radio("Filter type:", ["rows", "store_id"])
 
 start_row, end_row, store_ids = None, None, None
 if search_option == "rows":
-    start_row = st.number_input("Fila de inicio", min_value=0, step=1)
-    end_row = st.number_input("Fila de fin", min_value=0, step=1)
+    start_row = st.number_input("Start row", min_value=0, step=1)
+    end_row = st.number_input("End row", min_value=0, step=1)
 elif search_option == "store_id":
     store_ids = st.text_input("Introduce los Store IDs (separados por comas)")
 
