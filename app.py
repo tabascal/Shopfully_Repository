@@ -25,7 +25,7 @@ def update_text_of_textbox(presentation, column_letter, new_text):
                     text_frame = shape.text_frame
                     for paragraph in text_frame.paragraphs:
                         for run in paragraph.runs:
-                            run.text = new_text
+                            run.text = str(new_text)
 
 
 # Streamlit app
