@@ -107,14 +107,14 @@ def process_row(presentation_path, row, df1, df2, index, file_name_order_1, file
     file_name = '_'.join(file_name_parts) if file_name_parts else f"presentation_{index}"
 
     # Asegurar que la ruta de guardado es válida
-    absolute_save_path = get_valid_path(save_path)
+    absolute_save_path = clean_path(save_path)
 
     # Crear la carpeta si no existe
     if not os.path.exists(absolute_save_path):
         os.makedirs(absolute_save_path, exist_ok=True)
 
     output_path = os.path.join(absolute_save_path, f"{file_name}.pptx")
-    output_path = get_valid_path(output_path)  # Asegurar que es una ruta válida
+    output_path = clean_path(output_path)  # Asegurar que es una ruta válida
 
     try:
         presentation.save(output_path)
