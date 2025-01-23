@@ -138,6 +138,10 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 # Función para procesar una fila y generar un archivo PPTX
 
 
+import os
+import pptx
+import streamlit as st
+
 def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_order_1, file_name_order_2, file_name_order_3, save_path):
     presentation = pptx.Presentation(presentation_path)
 
@@ -155,14 +159,29 @@ def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_
             except ValueError:
                 continue
 
-    file_name = '_'.join(file_name_parts)
+    file_name = '_'.join(file_name_parts) if file_name_parts else f"presentation_{index}"
 
-    # Usar la ruta proporcionada por el usuario
-    output_path = os.path.join(save_path, f"{file_name}.pptx")
+    # Asegurar que la ruta de guardado es absoluta
+    absolute_save_path = os.path.abspath(save_path)
+    
+    # Verificar y crear la carpeta si no existe
+    if not os.path.exists(absolute_save_path):
+        os.makedirs(absolute_save_path, exist_ok=True)
 
-    presentation.save(output_path)
+    output_path = os.path.join(absolute_save_path, f"{file_name}.pptx")
 
-    st.success(f"Presentación guardada correctamente: {output_path}")
+    try:
+        presentation.save(output_path)
+
+        # Forzar sincronización en sistemas de archivos
+        os.sync()
+
+        st.success(f"✅ Presentación guardada correctamente: {output_path}")
+
+        # Mostrar la ruta exacta en la interfaz
+        st.write(f"📂 Archivo guardado en: `{output_path}`")
+    except Exception as e:
+        st.error(f"❌ Error al guardar la presentación: {e}")
 
 
 # Interfaz de Streamlit
