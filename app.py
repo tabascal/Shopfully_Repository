@@ -10,7 +10,7 @@ import time
 # ========================== FUNCIONES AUXILIARES ==========================
 
 def clean_path(path):
-    """Limpia la ruta asegurando que no tenga prefijos incorrectos y sea válida."""
+    """Limpia la ruta asegurando que sea válida."""
     path = os.path.normpath(path)  # Normaliza la ruta según el sistema operativo
     return path
 
@@ -18,6 +18,19 @@ def ensure_directory_exists(path):
     """Crea la carpeta si no existe."""
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
+
+def list_files_in_directory(path):
+    """Lista los archivos en el directorio para verificar que se han guardado."""
+    if os.path.exists(path):
+        files = os.listdir(path)
+        if files:
+            st.write("📂 Archivos en la carpeta después de guardar:")
+            for file in files:
+                st.write(f"📄 {file}")
+        else:
+            st.warning("⚠️ No hay archivos en la carpeta después de guardar.")
+    else:
+        st.error(f"🚨 La carpeta `{path}` no existe.")
 
 # ========================== INTERFAZ STREAMLIT ==========================
 
@@ -65,13 +78,21 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
     try:
         with open(ppt_template_path, "wb") as f:
             f.write(ppt_file.getbuffer())
+            f.flush()
+            os.fsync(f.fileno())  # Forzar escritura en disco
+        
         with open(excel_file_path, "wb") as f:
             f.write(excel_file.getbuffer())
+            f.flush()
+            os.fsync(f.fileno())  # Forzar escritura en disco
     except Exception as e:
         st.error(f"❌ Error al guardar los archivos: {e}")
         return
 
     st.success(f"📁 Archivos guardados correctamente en `{save_path}`")
+
+    # Verificar archivos guardados
+    list_files_in_directory(save_path)
 
     # Leer datos del archivo Excel
     try:
@@ -126,7 +147,11 @@ def process_row(presentation_path, row, df1, df2, index, file_name_order_1, file
     output_path = os.path.join(absolute_save_path, f"{file_name}.pptx")
 
     try:
-        presentation.save(output_path)
+        with open(output_path, "wb") as f:
+            presentation.save(f)
+            f.flush()
+            os.fsync(f.fileno())  # Forzar escritura en disco
+        
         st.success(f"✅ Presentación guardada en: `{output_path}`")
     except Exception as e:
         st.error(f"❌ Error al guardar la presentación: {e}")
@@ -147,12 +172,8 @@ if search_option == "rows":
 elif search_option == "store_id":
     store_ids = st.text_input("Introduce los Store IDs (separados por comas)")
 
-file_name_order_1 = st.text_input("Orden de nombre de archivo 1 (Índice de columna)")
-file_name_order_2 = st.text_input("Orden de nombre de archivo 2 (Índice de columna)")
-file_name_order_3 = st.text_input("Orden de nombre de archivo 3 (Índice de columna)")
-
 if st.button("Procesar"):
     if ppt_template and data_file:
-        process_files(ppt_template, data_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3, absolute_save_path)
+        process_files(ppt_template, data_file, search_option, start_row, end_row, store_ids, absolute_save_path)
     else:
         st.error("⚠️ Debes subir ambos archivos antes de procesar.")
