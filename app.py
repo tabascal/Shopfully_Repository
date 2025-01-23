@@ -36,11 +36,29 @@ save_path = st.text_input(
     "Select the path where the PPTX will be stored:",
     value=os.getcwd()  # Ruta predeterminada: directorio actual
 )
-# Verificar si la ruta es válida
-if not os.path.exists(save_path):
-    st.warning(
-        "La ruta de guardado especificada no existe. Se usará el directorio predeterminado.")
+
+# Verificar si la ruta es válida y crearla si no existe
+
+
+def is_valid_path(path):
+    try:
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        # Verificar permisos de escritura
+        test_file = os.path.join(path, 'test.txt')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        return True
+    except Exception as e:
+        st.warning(
+            f"La ruta de guardado especificada no es válida o no se puede escribir en ella. Error: {e}")
+        return False
+
+
+if not is_valid_path(save_path):
     save_path = os.getcwd()
+    st.warning("Se usará el directorio predeterminado.")
 
 # Botón para guardar la presentación
 if st.button("Save Dashboard"):
