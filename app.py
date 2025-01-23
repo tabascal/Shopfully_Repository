@@ -163,9 +163,6 @@ def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_
     presentation.save(output_path)
 
     st.success(f"Presentación guardada correctamente: {output_path}")
-    with open(output_path, "rb") as f:
-        st.download_button(label="Generate PPTX", data=f,
-                           file_name=f"{file_name}.pptx")
 
 
 # Interfaz de Streamlit
