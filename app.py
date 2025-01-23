@@ -8,10 +8,12 @@ import os
 import time
 
 # Función para asegurar que la ruta es válida en el sistema operativo
-def get_valid_path(path):
-    """Asegura que la ruta sea válida en el sistema operativo actual."""
-    if os.name == "nt":  # Windows
-        path = os.path.normpath(path)  # Convierte la ruta a formato correcto en Windows
+def clean_path(path):
+    """Limpia la ruta asegurando que no tenga prefijos incorrectos en entornos Linux/Windows."""
+    path = os.path.normpath(path)  # Normaliza la ruta
+    if os.name == "nt":  # Solo en Windows
+        if path.startswith("/"):
+            path = path.lstrip("/mnt/src/shopfully_repository/")  # Quita prefijo innecesario
     return os.path.abspath(path)
 
 # Streamlit app
@@ -24,7 +26,7 @@ save_path = st.text_input(
 )
 
 # Verificar y corregir la ruta
-absolute_save_path = get_valid_path(save_path)
+absolute_save_path = clean_path(save_path)
 
 if not os.path.exists(absolute_save_path):
     os.makedirs(absolute_save_path, exist_ok=True)  # Crea la carpeta si no existe
