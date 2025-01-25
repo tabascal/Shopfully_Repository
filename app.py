@@ -111,14 +111,7 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             mime="application/zip"
         )
 
-# Crear y ofrecer un ZIP con todos los archivos PPTX generados
-zip_buffer = create_zip_of_presentations(UPLOAD_FOLDER)
-st.download_button(
-    label="📁 Descargar todas las presentaciones",
-    data=zip_buffer,
-    file_name="presentaciones.zip",
-    mime="application/zip"
-)
+
 
 def process_row(presentation_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder):
     """Procesa una fila del dataset y genera un PPTX en la carpeta de salida."""
