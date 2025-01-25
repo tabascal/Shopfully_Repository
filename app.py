@@ -110,7 +110,7 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             file_name="presentaciones.zip",
             mime="application/zip"
         )
-        
+
 # Crear y ofrecer un ZIP con todos los archivos PPTX generados
 zip_buffer = create_zip_of_presentations(UPLOAD_FOLDER)
 st.download_button(
@@ -120,7 +120,8 @@ st.download_button(
     mime="application/zip"
 )
 
-def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_order_1, file_name_order_2, file_name_order_3):
+def process_row(presentation_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder):
+    """Procesa una fila del dataset y genera un PPTX en la carpeta de salida."""
     presentation = pptx.Presentation(presentation_path)
 
     for col_idx, col_name in enumerate(row.index):
@@ -137,14 +138,9 @@ def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_
             except ValueError:
                 continue
 
-    file_name = '_'.join(file_name_parts)
-    output_path = os.path.join(UPLOAD_FOLDER, f"{file_name}.pptx")
+    file_name = '_'.join(file_name_parts) if file_name_parts else f"presentation_{index}"
+    output_path = os.path.join(output_folder, f"{file_name}.pptx")
     presentation.save(output_path)
-
-    st.success(f"Presentation saved successfully: {file_name}.pptx")
-    with open(output_path, "rb") as f:
-        st.download_button(label="Download PPTX", data=f,
-                           file_name=f"{file_name}.pptx")
 
 
 # Interfaz de Streamlit
