@@ -108,4 +108,4 @@ elif search_option == "store_id":
     store_ids = st.text_input("Introduce los Store IDs (separados por comas)")
 
 if st.button("Procesar"):
-    process_files(ppt_template, data_file, search_option, start_row, end_row, store_ids, absolute_save_path)
+    process_files(ppt_template, absolute_save_path)
