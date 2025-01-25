@@ -4,48 +4,42 @@ import pptx
 import os
 import time
 
+
 # ========================== FUNCIONES AUXILIARES ==========================
 
 def clean_path(path):
-    """Limpia la ruta asegurando que sea válida."""
-    path = os.path.normpath(path)  # Normaliza la ruta según el sistema operativo
-    return path
+    """Limpia y normaliza la ruta asegurando que sea válida."""
+    return os.path.normpath(path)  # Normaliza la ruta según el sistema operativo
 
 def ensure_directory_exists(path):
-    """Crea la carpeta si no existe."""
-    if not os.path.exists(path):
-        os.makedirs(path, exist_ok=True)
-
-def list_files_in_directory(path):
-    """Lista los archivos en el directorio para verificar que se han guardado."""
-    if os.path.exists(path):
-        files = os.listdir(path)
-        if files:
-            st.write("📂 Archivos en la carpeta después de guardar:")
-            for file in files:
-                st.write(f"📄 {file}")
-        else:
-            st.warning("⚠️ No hay archivos en la carpeta después de guardar.")
-    else:
-        st.error(f"🚨 La carpeta `{path}` no existe.")
+    """Verifica si la ruta existe. Si no, intenta crearla."""
+    try:
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        return True
+    except Exception as e:
+        st.error(f"❌ Error al crear la carpeta: {e}")
+        return False
 
 # ========================== INTERFAZ STREAMLIT ==========================
 
 st.title("Shopfully Dashboard Generator")
 
-# Sección para que el usuario elija la ruta de guardado
+# Input para que el usuario seleccione la ruta de guardado
 save_path = st.text_input(
-    "Selecciona la carpeta donde se guardarán los PPTX:",
-    value=os.getcwd()  # Directorio actual por defecto
+    "📂 Ingresa la ruta donde se guardarán los PPTX:",
+    value=os.getcwd()  # Usa el directorio actual como valor por defecto
 )
 
-# Corregir la ruta antes de usarla
+# Normalizar la ruta
 absolute_save_path = clean_path(save_path)
 
-# Crear la carpeta si no existe
-ensure_directory_exists(absolute_save_path)
+# Verificar y crear la ruta si es necesario
+if ensure_directory_exists(absolute_save_path):
+    st.success(f"✅ Archivos se guardarán en: `{absolute_save_path}`")
+else:
+    st.error("⚠️ No se pudo usar la ruta especificada.")
 
-st.write(f"📂 Guardando archivos en: `{absolute_save_path}`")
 
 # ========================== FUNCIONES DE PROCESAMIENTO ==========================
 
@@ -82,8 +76,6 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
     st.success(f"📁 Archivos guardados correctamente en `{save_path}`")
 
-    # Verificar archivos guardados
-    list_files_in_directory(save_path)
 
 def process_row(presentation_path, row, save_path):
     """Procesa una fila del dataset y genera un PPTX."""
