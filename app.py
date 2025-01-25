@@ -6,6 +6,21 @@ from pptx.util import Pt
 from pptx.enum.text import PP_ALIGN
 import os
 import time
+import zipfile
+import io
+import shutil
+
+def create_zip_of_presentations(folder_path):
+    """Crea un archivo ZIP con todos los PPTX generados en la carpeta."""
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for file in os.listdir(folder_path):
+            if file.endswith(".pptx"):
+                zipf.write(os.path.join(folder_path, file), arcname=file)
+    
+    zip_buffer.seek(0)
+    return zip_buffer
 
 # Crear la carpeta de subidas si no existe
 UPLOAD_FOLDER = "uploads"
@@ -42,11 +57,13 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
     try:
         with pd.ExcelFile(excel_file_path) as xls:
             df1 = pd.read_excel(xls, sheet_name=0)  # Primera hoja
-            df2 = pd.read_excel(xls, sheet_name=1)  # Segunda hoja
-            sheet_names = xls.sheet_names
     except PermissionError as e:
         st.error(f"Error reading Excel file: {e}")
         return
+
+    # Definir carpeta donde se guardarán los archivos antes del ZIP
+    output_folder = os.path.join(UPLOAD_FOLDER, "pptx_files")
+    os.makedirs(output_folder, exist_ok=True)
 
     if search_option == 'rows':
         total_rows = end_row - start_row + 1
@@ -56,12 +73,10 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             if index < start_row or index > end_row:
                 continue
 
-            process_row(ppt_template_path, row, sheet_names, df1, df2, index,
-                        file_name_order_1, file_name_order_2, file_name_order_3)
+            process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder)
 
             current_row += 1
             progress = int((current_row / total_rows) * 100)
-            time.sleep(1)
             st.progress(progress / 100)
 
     elif search_option == 'store_id':
@@ -78,14 +93,32 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             row = matching_rows.iloc[0]
             index = row.name
 
-            process_row(ppt_template_path, row, sheet_names, df1, df2, index,
-                        file_name_order_1, file_name_order_2, file_name_order_3)
+            process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder)
 
             current_id += 1
             progress = int((current_id / total_ids) * 100)
-            time.sleep(1)
             st.progress(progress / 100)
+# Crear el ZIP después de generar todos los archivos
+    zip_path = os.path.join(UPLOAD_FOLDER, "presentaciones.zip")
+    shutil.make_archive(zip_path.replace(".zip", ""), 'zip', output_folder)
 
+    # Mostrar el botón de descarga
+    with open(zip_path, "rb") as zip_file:
+        st.download_button(
+            label="📥 Descargar todas las presentaciones",
+            data=zip_file,
+            file_name="presentaciones.zip",
+            mime="application/zip"
+        )
+        
+# Crear y ofrecer un ZIP con todos los archivos PPTX generados
+zip_buffer = create_zip_of_presentations(UPLOAD_FOLDER)
+st.download_button(
+    label="📁 Descargar todas las presentaciones",
+    data=zip_buffer,
+    file_name="presentaciones.zip",
+    mime="application/zip"
+)
 
 def process_row(presentation_path, row, sheet_names, df1, df2, index, file_name_order_1, file_name_order_2, file_name_order_3):
     presentation = pptx.Presentation(presentation_path)
