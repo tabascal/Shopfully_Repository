@@ -9,7 +9,7 @@ import time
 
 def clean_path(path):
     """Limpia y normaliza la ruta asegurando que sea válida."""
-    return os.path.normpath(path)  # Normaliza la ruta según el sistema operativo
+    return os.path.normpath(path)
 
 def ensure_directory_exists(path):
     """Verifica si la ruta existe. Si no, intenta crearla."""
@@ -43,38 +43,36 @@ else:
 
 # ========================== FUNCIONES DE PROCESAMIENTO ==========================
 
-def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, save_path):
-    """Procesa los archivos y genera los PPTX en la ruta especificada."""
+def process_files(ppt_file, save_path):
+    """Procesa el archivo y guarda el PPTX en la ruta especificada."""
     
-    if ppt_file is None or excel_file is None:
-        st.error("⚠️ Error: Debes subir ambos archivos antes de procesar.")
-        return
-    
-    # Verificar si los números ingresados son válidos
-    if search_option == "rows" and (start_row is None or end_row is None or start_row > end_row):
-        st.error("⚠️ Error: Debes ingresar filas de inicio y fin válidas.")
+    if ppt_file is None:
+        st.error("⚠️ Error: No se ha subido ningún archivo PPTX.")
         return
 
-    # Asegurar que la ruta de guardado es válida
     save_path = clean_path(save_path)
     ensure_directory_exists(save_path)
 
-    # Guardar archivos en la carpeta especificada por el usuario
-    ppt_template_path = os.path.join(save_path, ppt_file.name)
-    excel_file_path = os.path.join(save_path, excel_file.name)
+    # Ruta final donde se guardará
+    ppt_output_path = os.path.join(save_path, "output_presentation.pptx")
 
     try:
-        with open(ppt_template_path, "wb") as f:
+        # Guardar archivo subido
+        with open(ppt_output_path, "wb") as f:
             f.write(ppt_file.getbuffer())
-        
-        with open(excel_file_path, "wb") as f:
-            f.write(excel_file.getbuffer())
+
+        # Verificar que el archivo realmente se guardó
+        if os.path.exists(ppt_output_path):
+            st.success(f"✅ Presentación guardada correctamente en: `{ppt_output_path}`")
+        else:
+            st.error("❌ No se encontró el archivo después de guardarlo.")
+
+        # Mostrar archivos en la carpeta
+        st.write("📂 Archivos en la carpeta después de guardar:")
+        st.write(os.listdir(save_path))
 
     except Exception as e:
-        st.error(f"❌ Error al guardar los archivos: {e}")
-        return
-
-    st.success(f"📁 Archivos guardados correctamente en `{save_path}`")
+        st.error(f"❌ Error al guardar el archivo PPTX: {e}")
 
 
 def process_row(presentation_path, row, save_path):
