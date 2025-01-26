@@ -195,7 +195,7 @@ elif search_option == "store_id":
 if st.button("Process"):
     if ppt_template and data_file:
         process_files(ppt_template, data_file, search_option, start_row, end_row,
-                      store_ids, file_name_order_1, file_name_order_2, file_name_order_3)
+                      store_ids)
     else:
         st.error("Please upload both files before processing.")
 
