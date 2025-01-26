@@ -19,8 +19,9 @@ def create_zip_of_presentations(folder_path):
     
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
         for file in os.listdir(folder_path):
-            if file.endswith(".pptx"):
-                zipf.write(os.path.join(folder_path, file), arcname=file)
+            file_path = os.path.join(folder_path, file)
+            if file.endswith(".pptx"):  # Evitamos incluir plantilla y Excel
+                zipf.write(file_path, arcname=file)
     
     zip_buffer.seek(0)
     return zip_buffer
@@ -52,13 +53,18 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
     # Crear un identificador único basado en la fecha y hora actual
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Crear una carpeta de salida única
-    unique_output_folder = f"pptx_files_{timestamp}"
-    os.makedirs(unique_output_folder, exist_ok=True)
+    # Nombre único para la carpeta y el ZIP
+    folder_name = f"Presentations_{timestamp}"
 
-    # Guardar archivos en la carpeta temporal
-    ppt_template_path = os.path.join(unique_output_folder, ppt_file.name)
-    excel_file_path = os.path.join(unique_output_folder, excel_file.name)
+    # Crear carpeta de salida
+    os.makedirs(folder_name, exist_ok=True)
+
+    # Guardar archivos en una carpeta temporal fuera de la de presentaciones
+    temp_folder = "temp_files"
+    os.makedirs(temp_folder, exist_ok=True)
+
+    ppt_template_path = os.path.join(temp_folder, ppt_file.name)
+    excel_file_path = os.path.join(temp_folder, excel_file.name)
 
     with open(ppt_template_path, "wb") as f:
         f.write(ppt_file.getbuffer())
@@ -88,28 +94,28 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
         elif search_option == 'store_id' and str(row.iloc[0]) not in store_ids.split(','):
             continue
 
-        process_row(ppt_template_path, row, df1, index, selected_columns, unique_output_folder)
+        process_row(ppt_template_path, row, df1, index, selected_columns, folder_name)
 
         current_file += 1
         progress = current_file / total_files
         progress_bar.progress(progress)  # Actualiza la barra de progreso
-        progress_text.write(f"📄 Generando presentación {current_file}/{total_files}")
+        progress_text.write(f"📄 Generating presentation {current_file}/{total_files}")
 
-    # Crear un ZIP único con la carpeta generada
-    unique_zip_path = f"presentaciones_{timestamp}.zip"
-    shutil.make_archive(unique_zip_path.replace(".zip", ""), 'zip', unique_output_folder)
+    # Crear un ZIP único sin la plantilla ni el Excel
+    zip_path = f"{folder_name}.zip"
+    shutil.make_archive(zip_path.replace(".zip", ""), 'zip', folder_name)
 
     # Mostrar el botón de descarga
-    with open(unique_zip_path, "rb") as zip_file:
+    with open(zip_path, "rb") as zip_file:
         st.download_button(
-            label=f"📥 Descargar {total_files} presentaciones",
+            label=f"📥 Download {total_files} presentations",
             data=zip_file,
-            file_name=f"presentaciones_{timestamp}.zip",
+            file_name=f"{folder_name}.zip",
             mime="application/zip"
         )
 
     # Indicar que la generación ha finalizado
-    progress_text.write("✅ ¡Todas las presentaciones han sido generadas!")
+    progress_text.write("✅ All presentations have been generated!")
 
 
 def process_row(presentation_path, row, df1, index, selected_columns, output_folder):
@@ -145,12 +151,12 @@ if data_file is not None:
     column_names = df.columns.tolist()
 
     selected_columns = st.multiselect(
-        "📂 Selecciona y ordena las columnas para el nombre del archivo:",
+        "📂 Select and order the columns for the file name:",
         column_names,
         default=column_names[:3]
     )
 
-    st.write("🔹 Ejemplo de nombre de archivo:", get_filename_from_selection(df.iloc[0], selected_columns))
+    st.write("🔹 Example file name:", get_filename_from_selection(df.iloc[0], selected_columns))
 
 if st.button("Process"):
     if ppt_template and data_file:
