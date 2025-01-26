@@ -10,6 +10,7 @@ import zipfile
 import io
 import shutil
 from datetime import datetime
+import re
 
 def create_zip_of_presentations(folder_path):
     """Crea un archivo ZIP con todos los PPTX generados en la carpeta."""
@@ -32,22 +33,19 @@ progress = 0
 
 
 def update_text_of_textbox(presentation, column_letter, new_text):
+    """Busca y reemplaza texto dentro de las cajas de texto que tengan el formato {A}, {B}, etc."""
+    pattern = rf"\{{{column_letter}\}}"  # Expresión regular para encontrar "{A}", "{B}", etc.
+
     for slide in presentation.slides:
         for shape in slide.shapes:
             if shape.has_text_frame and shape.text:
-                if shape.text.strip() == column_letter:
+                if re.search(pattern, shape.text):  # Buscar patrón en el texto
                     text_frame = shape.text_frame
                     for paragraph in text_frame.paragraphs:
                         for run in paragraph.runs:
-                            run.text = str(new_text)
+                            run.text = re.sub(pattern, str(new_text), run.text)  # Reemplazo
 
 
-import streamlit as st
-import shutil
-import os
-import pandas as pd
-import pptx
-import time
 
 def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3):
     # Crear un identificador único basado en la fecha y hora actual
@@ -141,8 +139,8 @@ def process_row(presentation_path, row, df1, index, file_name_order_1, file_name
     presentation = pptx.Presentation(presentation_path)
 
     for col_idx, col_name in enumerate(row.index):
-        column_letter = chr(65 + col_idx)
-        update_text_of_textbox(presentation, column_letter, row[col_name])
+        column_letter = chr(65 + col_idx)  # Convertimos índice numérico en letra A-Z
+        update_text_of_textbox(presentation, column_letter, row[col_name])  # Pasamos letra sin {}
 
     file_name_parts = []
     for order in [file_name_order_1, file_name_order_2, file_name_order_3]:
@@ -157,6 +155,7 @@ def process_row(presentation_path, row, df1, index, file_name_order_1, file_name
     file_name = '_'.join(file_name_parts) if file_name_parts else f"presentation_{index}"
     output_path = os.path.join(output_folder, f"{file_name}.pptx")
     presentation.save(output_path)
+
 
 
 # Interfaz de Streamlit
