@@ -33,6 +33,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Estado global para progreso
 progress = 0
 
+def get_filename_from_selection(row, selected_columns):
+    """Genera el nombre del archivo según las columnas seleccionadas."""
+    file_name_parts = [str(row[col]) for col in selected_columns if col in row]
+    return "_".join(file_name_parts)
+
+
+
 
 def update_text_of_textbox(presentation, column_letter, new_text):
     """Busca y reemplaza texto dentro de las cajas de texto que tengan el formato {A}, {B}, etc."""
@@ -194,3 +201,15 @@ if st.button("Process"):
                       store_ids, file_name_order_1, file_name_order_2, file_name_order_3)
     else:
         st.error("Please upload both files before processing.")
+
+if data_file is not None:
+    df = pd.read_excel(data_file, sheet_name=0)  # Leer la primera hoja del Excel
+    column_names = df.columns.tolist()
+
+    selected_columns = st.multiselect(
+        "📂 Selecciona y ordena las columnas para el nombre del archivo:",
+        column_names,
+        default=column_names[:3]
+    )
+
+    st.write("🔹 Ejemplo de nombre de archivo:", get_filename_from_selection(df.iloc[0], selected_columns))
