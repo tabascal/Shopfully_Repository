@@ -141,9 +141,9 @@ def process_row(presentation_path, row, df1, index, selected_columns, output_fol
 
 
 # Interfaz de Streamlit
-st.title("PPTX Processor with Streamlit")
+st.title("Shopfully Dashboard Generator")
 
-ppt_template = st.file_uploader("Upload PPTX Template", type=["pptx"])
+ppt_template = st.file_uploader("Upload PPTX Template (Text Box format to edit {X})", type=["pptx"])
 data_file = st.file_uploader("Upload Excel File", type=["xlsx"])
 
 search_option = st.radio("Search by:", ["rows", "store_id"])
