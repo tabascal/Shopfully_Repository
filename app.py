@@ -11,17 +11,19 @@ import io
 import shutil
 from datetime import datetime
 
+
 def create_zip_of_presentations(folder_path):
     """Crea un archivo ZIP con todos los PPTX generados en la carpeta."""
     zip_buffer = io.BytesIO()
-    
+
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
         for file in os.listdir(folder_path):
             if file.endswith(".pptx"):
                 zipf.write(os.path.join(folder_path, file), arcname=file)
-    
+
     zip_buffer.seek(0)
     return zip_buffer
+
 
 # Crear la carpeta de subidas si no existe
 UPLOAD_FOLDER = "uploads"
@@ -42,19 +44,13 @@ def update_text_of_textbox(presentation, column_letter, new_text):
                             run.text = str(new_text)
 
 
-import streamlit as st
-import shutil
-import os
-import pandas as pd
-import pptx
-import time
-
 def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3):
     # Crear un identificador único basado en la fecha y hora actual
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Crear una carpeta de salida única
-    unique_output_folder = os.path.join(UPLOAD_FOLDER, f"pptx_files_{timestamp}")
+    unique_output_folder = os.path.join(
+        UPLOAD_FOLDER, f"pptx_files_{timestamp}")
     os.makedirs(unique_output_folder, exist_ok=True)
 
     # Guardar archivos en la carpeta temporal
@@ -92,12 +88,14 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             if index < start_row or index > end_row:
                 continue
 
-            process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, unique_output_folder)
+            process_row(ppt_template_path, row, df1, index, file_name_order_1,
+                        file_name_order_2, file_name_order_3, unique_output_folder)
 
             current_file += 1
             progress = current_file / total_files
             progress_bar.progress(progress)  # Actualiza la barra de progreso
-            progress_text.write(f"📄 Generando presentación {current_file}/{total_files}")
+            progress_text.write(f"📄 Generando presentación {
+                                current_file}/{total_files}")
 
     elif search_option == 'store_id':
         store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
@@ -111,16 +109,20 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             row = matching_rows.iloc[0]
             index = row.name
 
-            process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, unique_output_folder)
+            process_row(ppt_template_path, row, df1, index, file_name_order_1,
+                        file_name_order_2, file_name_order_3, unique_output_folder)
 
             current_file += 1
             progress = current_file / total_files
             progress_bar.progress(progress)  # Actualiza la barra de progreso
-            progress_text.write(f"📄 Generando presentación {current_file}/{total_files}")
+            progress_text.write(f"📄 Generando presentación {
+                                current_file}/{total_files}")
 
     # Crear un ZIP único con la carpeta generada
-    unique_zip_path = os.path.join(UPLOAD_FOLDER, f"presentaciones_{timestamp}.zip")
-    shutil.make_archive(unique_zip_path.replace(".zip", ""), 'zip', unique_output_folder)
+    unique_zip_path = os.path.join(
+        UPLOAD_FOLDER, f"presentaciones_{timestamp}.zip")
+    shutil.make_archive(unique_zip_path.replace(
+        ".zip", ""), 'zip', unique_output_folder)
 
     # Mostrar el botón de descarga
     with open(unique_zip_path, "rb") as zip_file:
@@ -133,7 +135,6 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
     # Indicar que la generación ha finalizado
     progress_text.write("✅ ¡Todas las presentaciones han sido generadas!")
-
 
 
 def process_row(presentation_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder):
@@ -154,7 +155,8 @@ def process_row(presentation_path, row, df1, index, file_name_order_1, file_name
             except ValueError:
                 continue
 
-    file_name = '_'.join(file_name_parts) if file_name_parts else f"presentation_{index}"
+    file_name = '_'.join(
+        file_name_parts) if file_name_parts else f"presentation_{index}"
     output_path = os.path.join(output_folder, f"{file_name}.pptx")
     presentation.save(output_path)
 
