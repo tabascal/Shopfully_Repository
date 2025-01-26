@@ -9,6 +9,7 @@ import time
 import zipfile
 import io
 import shutil
+from datetime import datetime
 
 def create_zip_of_presentations(folder_path):
     """Crea un archivo ZIP con todos los PPTX generados en la carpeta."""
@@ -49,9 +50,16 @@ import pptx
 import time
 
 def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3):
+    # Crear un identificador único basado en la fecha y hora actual
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Crear una carpeta de salida única
+    unique_output_folder = os.path.join(UPLOAD_FOLDER, f"pptx_files_{timestamp}")
+    os.makedirs(unique_output_folder, exist_ok=True)
+
     # Guardar archivos en la carpeta temporal
-    ppt_template_path = os.path.join(UPLOAD_FOLDER, ppt_file.name)
-    excel_file_path = os.path.join(UPLOAD_FOLDER, excel_file.name)
+    ppt_template_path = os.path.join(unique_output_folder, ppt_file.name)
+    excel_file_path = os.path.join(unique_output_folder, excel_file.name)
 
     with open(ppt_template_path, "wb") as f:
         f.write(ppt_file.getbuffer())
@@ -65,10 +73,6 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
     except PermissionError as e:
         st.error(f"Error reading Excel file: {e}")
         return
-
-    # Definir carpeta donde se guardarán los archivos antes del ZIP
-    output_folder = os.path.join(UPLOAD_FOLDER, "pptx_files")
-    os.makedirs(output_folder, exist_ok=True)
 
     # Definir el número total de archivos a generar
     total_files = 0
@@ -88,7 +92,7 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             if index < start_row or index > end_row:
                 continue
 
-            process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder)
+            process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, unique_output_folder)
 
             current_file += 1
             progress = current_file / total_files
@@ -107,23 +111,23 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             row = matching_rows.iloc[0]
             index = row.name
 
-            process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder)
+            process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, unique_output_folder)
 
             current_file += 1
             progress = current_file / total_files
             progress_bar.progress(progress)  # Actualiza la barra de progreso
             progress_text.write(f"📄 Generando presentación {current_file}/{total_files}")
 
-    # Crear el ZIP después de generar todos los archivos
-    zip_path = os.path.join(UPLOAD_FOLDER, "presentaciones.zip")
-    shutil.make_archive(zip_path.replace(".zip", ""), 'zip', output_folder)
+    # Crear un ZIP único con la carpeta generada
+    unique_zip_path = os.path.join(UPLOAD_FOLDER, f"presentaciones_{timestamp}.zip")
+    shutil.make_archive(unique_zip_path.replace(".zip", ""), 'zip', unique_output_folder)
 
     # Mostrar el botón de descarga
-    with open(zip_path, "rb") as zip_file:
+    with open(unique_zip_path, "rb") as zip_file:
         st.download_button(
-            label="📥 Descargar todas las presentaciones",
+            label=f"📥 Descargar {total_files} presentaciones",
             data=zip_file,
-            file_name="presentaciones.zip",
+            file_name=f"presentaciones_{timestamp}.zip",
             mime="application/zip"
         )
 
