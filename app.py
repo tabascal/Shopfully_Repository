@@ -195,7 +195,7 @@ with col1:
 
 # Botón 2 - Search by Store ID
 with col2:
-    if st.button("🏬 Store ID", use_container_width=True):
+    if st.button("🔍 Store ID", use_container_width=True):
         st.session_state.search_option = "store_id"
 
 # Mostrar la opción seleccionada
