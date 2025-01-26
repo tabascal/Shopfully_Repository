@@ -41,9 +41,14 @@ def update_text_of_textbox(presentation, column_letter, new_text):
                             run.text = str(new_text)
 
 
-def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3):
-    global progress
+import streamlit as st
+import shutil
+import os
+import pandas as pd
+import pptx
+import time
 
+def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, file_name_order_1, file_name_order_2, file_name_order_3):
     # Guardar archivos en la carpeta temporal
     ppt_template_path = os.path.join(UPLOAD_FOLDER, ppt_file.name)
     excel_file_path = os.path.join(UPLOAD_FOLDER, excel_file.name)
@@ -65,24 +70,33 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
     output_folder = os.path.join(UPLOAD_FOLDER, "pptx_files")
     os.makedirs(output_folder, exist_ok=True)
 
+    # Definir el número total de archivos a generar
+    total_files = 0
     if search_option == 'rows':
-        total_rows = end_row - start_row + 1
-        current_row = 0
+        total_files = end_row - start_row + 1
+    elif search_option == 'store_id':
+        total_files = len(store_ids.split(','))
 
+    # Crear una barra de progreso
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+
+    current_file = 0  # Contador de archivos generados
+
+    if search_option == 'rows':
         for index, row in df1.iterrows():
             if index < start_row or index > end_row:
                 continue
 
             process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder)
 
-            current_row += 1
-            progress = int((current_row / total_rows) * 100)
-            st.progress(progress / 100)
+            current_file += 1
+            progress = current_file / total_files
+            progress_bar.progress(progress)  # Actualiza la barra de progreso
+            progress_text.write(f"📄 Generando presentación {current_file}/{total_files}")
 
     elif search_option == 'store_id':
         store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
-        total_ids = len(store_id_list)
-        current_id = 0
 
         for store_id in store_id_list:
             matching_rows = df1[df1.iloc[:, 0].astype(str) == store_id]
@@ -95,10 +109,12 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
             process_row(ppt_template_path, row, df1, index, file_name_order_1, file_name_order_2, file_name_order_3, output_folder)
 
-            current_id += 1
-            progress = int((current_id / total_ids) * 100)
-            st.progress(progress / 100)
-# Crear el ZIP después de generar todos los archivos
+            current_file += 1
+            progress = current_file / total_files
+            progress_bar.progress(progress)  # Actualiza la barra de progreso
+            progress_text.write(f"📄 Generando presentación {current_file}/{total_files}")
+
+    # Crear el ZIP después de generar todos los archivos
     zip_path = os.path.join(UPLOAD_FOLDER, "presentaciones.zip")
     shutil.make_archive(zip_path.replace(".zip", ""), 'zip', output_folder)
 
@@ -110,6 +126,9 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             file_name="presentaciones.zip",
             mime="application/zip"
         )
+
+    # Indicar que la generación ha finalizado
+    progress_text.write("✅ ¡Todas las presentaciones han sido generadas!")
 
 
 
