@@ -79,8 +79,18 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
         st.error(f"Error reading Excel file: {e}")
         return
 
-    # Definir el número total de archivos a generar
-    total_files = len(df1) if search_option == 'rows' else len(store_ids.split(','))
+    # Definir correctamente el número total de archivos a generar
+    if search_option == 'rows':
+        total_files = len(df1.iloc[start_row:end_row + 1])  # Solo las filas seleccionadas
+    elif search_option == 'store_id':
+        store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
+        total_files = sum(df1.iloc[:, 0].astype(str).isin(store_id_list))  # Solo los Store ID seleccionados
+    else:
+        total_files = 0
+
+    if total_files == 0:
+        st.error("⚠️ No hay archivos para generar. Verifica los filtros.")
+        return
 
     # Crear una barra de progreso
     progress_bar = st.progress(0)
@@ -99,7 +109,7 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
         current_file += 1
         progress = current_file / total_files
         progress_bar.progress(progress)  # Actualiza la barra de progreso
-        progress_text.write(f"📄 Generating presentation {current_file}/{total_files}")
+        progress_text.write(f"📄 Generating presentation {current_file}/{total_files}")  # ✅ Se muestra el número correcto
 
     # Crear un ZIP único sin la plantilla ni el Excel
     zip_path = f"{folder_name}.zip"
@@ -116,7 +126,6 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
     # Indicar que la generación ha finalizado
     progress_text.write("✅ All presentations have been generated!")
-
 
 def process_row(presentation_path, row, df1, index, selected_columns, output_folder):
     """Procesa una fila del dataset y genera un PPTX en la carpeta de salida."""
