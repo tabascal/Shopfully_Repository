@@ -191,9 +191,6 @@ if search_option == "rows":
 elif search_option == "store_id":
     store_ids = st.text_input("Enter Store IDs (comma-separated)")
 
-file_name_order_1 = st.text_input("File Name Order 1 (Column Index)")
-file_name_order_2 = st.text_input("File Name Order 2 (Column Index)")
-file_name_order_3 = st.text_input("File Name Order 3 (Column Index)")
 
 if st.button("Process"):
     if ppt_template and data_file:
