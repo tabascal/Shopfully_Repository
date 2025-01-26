@@ -84,7 +84,7 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
         total_files = len(df1.iloc[start_row:end_row + 1])  # Solo las filas seleccionadas
     elif search_option == 'store_id':
         store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
-        total_files = sum(df1.iloc[:, 0].astype(str).isin(store_id_list))  # Solo los Store ID seleccionados
+        total_files = sum(df1.iloc[:, 0].astype(str).isin(store_id_list))  # Ahora cuenta bien todos los Store ID encontrados
     else:
         total_files = 0
 
@@ -98,18 +98,29 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
     current_file = 0  # Contador de archivos generados
 
-    for index, row in df1.iterrows():
-        if search_option == 'rows' and (index < start_row or index > end_row):
-            continue
-        elif search_option == 'store_id' and str(row.iloc[0]) not in store_ids.split(','):
-            continue
+    if search_option == 'rows':
+        for index, row in df1.iloc[start_row:end_row + 1].iterrows():
+            process_row(ppt_template_path, row, df1, index, selected_columns, folder_name)
+            current_file += 1
+            progress = current_file / total_files
+            progress_bar.progress(progress)
+            progress_text.write(f"📄 Generating presentation {current_file}/{total_files}")
 
-        process_row(ppt_template_path, row, df1, index, selected_columns, folder_name)
+    elif search_option == 'store_id':
+        store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
 
-        current_file += 1
-        progress = current_file / total_files
-        progress_bar.progress(progress)  # Actualiza la barra de progreso
-        progress_text.write(f"📄 Generating presentation {current_file}/{total_files}")  # ✅ Se muestra el número correcto
+        for store_id in store_id_list:
+            matching_rows = df1[df1.iloc[:, 0].astype(str) == store_id]
+            if matching_rows.empty:
+                st.warning(f"No matching rows found for Store ID: {store_id}")
+                continue
+
+            for _, row in matching_rows.iterrows():
+                process_row(ppt_template_path, row, df1, row.name, selected_columns, folder_name)
+                current_file += 1
+                progress = current_file / total_files
+                progress_bar.progress(progress)
+                progress_text.write(f"📄 Generating presentation {current_file}/{total_files}")
 
     # Crear un ZIP único sin la plantilla ni el Excel
     zip_path = f"{folder_name}.zip"
@@ -126,6 +137,9 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
     # Indicar que la generación ha finalizado
     progress_text.write("✅ All presentations have been generated!")
+
+
+
 
 def process_row(presentation_path, row, df1, index, selected_columns, output_folder):
     """Procesa una fila del dataset y genera un PPTX en la carpeta de salida."""
