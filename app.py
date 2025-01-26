@@ -39,8 +39,6 @@ def get_filename_from_selection(row, selected_columns):
     return "_".join(file_name_parts)
 
 
-
-
 def update_text_of_textbox(presentation, column_letter, new_text):
     """Busca y reemplaza texto dentro de las cajas de texto que tengan el formato {A}, {B}, etc."""
     pattern = rf"\{{{
@@ -191,13 +189,6 @@ if search_option == "rows":
 elif search_option == "store_id":
     store_ids = st.text_input("Enter Store IDs (comma-separated)")
 
-
-if st.button("Process"):
-    if ppt_template and data_file:
-        process_files(ppt_template, data_file, search_option, start_row, end_row, store_ids)
-    else:
-        st.error("Please upload both files before processing.")
-
 if data_file is not None:
     df = pd.read_excel(data_file, sheet_name=0)  # Leer la primera hoja del Excel
     column_names = df.columns.tolist()
@@ -209,3 +200,9 @@ if data_file is not None:
     )
 
     st.write("🔹 Ejemplo de nombre de archivo:", get_filename_from_selection(df.iloc[0], selected_columns))
+
+if st.button("Process"):
+    if ppt_template and data_file:
+        process_files(ppt_template, data_file, search_option, start_row, end_row, store_ids, selected_columns)
+    else:
+        st.error("Please upload both files before processing.")
