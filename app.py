@@ -178,12 +178,12 @@ st.title("Shopfully Dashboard Generator")
 
 # ========= 📂 Upload de archivos con formato mejorado =========
 st.markdown(
-    "**Upload PPTX Template**  \n*(Text Box format to edit `{X}`)*", unsafe_allow_html=True)
+    "**Upload PPTX Template**  \n*(Text Box format that will be edited -> {Column Letter} For Example: `{A}`)*", unsafe_allow_html=True)
 ppt_template = st.file_uploader("", type=["pptx"])
 
 st.write("")  # Espaciado
 
-st.markdown("**Upload Excel File**", unsafe_allow_html=True)
+st.markdown("**Upload Excel File** \n*(Column A must be `Store ID`)*", unsafe_allow_html=True)
 data_file = st.file_uploader("", type=["xlsx"])
 
 
