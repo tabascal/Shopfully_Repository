@@ -16,13 +16,13 @@ import re
 def create_zip_of_presentations(folder_path):
     """Crea un archivo ZIP con todos los PPTX generados en la carpeta."""
     zip_buffer = io.BytesIO()
-    
+
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
         for file in os.listdir(folder_path):
             file_path = os.path.join(folder_path, file)
             if file.endswith(".pptx"):  # Evitamos incluir plantilla y Excel
                 zipf.write(file_path, arcname=file)
-    
+
     zip_buffer.seek(0)
     return zip_buffer
 
@@ -35,7 +35,8 @@ def get_filename_from_selection(row, selected_columns):
 
 def update_text_of_textbox(presentation, column_letter, new_text):
     """Busca y reemplaza texto dentro de las cajas de texto que tengan el formato {A}, {B}, etc."""
-    pattern = rf"\{{{column_letter}\}}"  # Expresión regular para encontrar "{A}", "{B}", etc.
+    pattern = rf"\{{{
+        column_letter}\}}"  # Expresión regular para encontrar "{A}", "{B}", etc.
 
     for slide in presentation.slides:
         for shape in slide.shapes:
@@ -44,12 +45,13 @@ def update_text_of_textbox(presentation, column_letter, new_text):
                     text_frame = shape.text_frame
                     for paragraph in text_frame.paragraphs:
                         for run in paragraph.runs:
-                            run.text = re.sub(pattern, str(new_text), run.text)  # Reemplazo
+                            run.text = re.sub(pattern, str(
+                                new_text), run.text)  # Reemplazo
 
 
 def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, selected_columns):
     """Procesa los archivos y genera las presentaciones."""
-    
+
     # Crear un identificador único basado en la fecha y hora actual
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -81,15 +83,17 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
     # Definir correctamente el número total de archivos a generar
     if search_option == 'rows':
-        total_files = len(df1.iloc[start_row:end_row + 1])  # Solo las filas seleccionadas
+        # Solo las filas seleccionadas
+        total_files = len(df1.iloc[start_row:end_row + 1])
     elif search_option == 'store_id':
         store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
-        total_files = sum(df1.iloc[:, 0].astype(str).isin(store_id_list))  # Ahora cuenta bien todos los Store ID encontrados
+        # Ahora cuenta bien todos los Store ID encontrados
+        total_files = sum(df1.iloc[:, 0].astype(str).isin(store_id_list))
     else:
         total_files = 0
 
     if total_files == 0:
-        st.error("⚠️ No hay archivos para generar. Verifica los filtros.")
+        st.error("⚠️ No files to generate. Check the filters.")
         return
 
     # Crear una barra de progreso
@@ -100,11 +104,13 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
     if search_option == 'rows':
         for index, row in df1.iloc[start_row:end_row + 1].iterrows():
-            process_row(ppt_template_path, row, df1, index, selected_columns, folder_name)
+            process_row(ppt_template_path, row, df1, index,
+                        selected_columns, folder_name)
             current_file += 1
             progress = current_file / total_files
             progress_bar.progress(progress)
-            progress_text.write(f"📄 Generating presentation {current_file}/{total_files}")
+            progress_text.write(f"📄 Generating presentation {
+                                current_file}/{total_files}")
 
     elif search_option == 'store_id':
         store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
@@ -116,11 +122,13 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
                 continue
 
             for _, row in matching_rows.iterrows():
-                process_row(ppt_template_path, row, df1, row.name, selected_columns, folder_name)
+                process_row(ppt_template_path, row, df1, row.name,
+                            selected_columns, folder_name)
                 current_file += 1
                 progress = current_file / total_files
                 progress_bar.progress(progress)
-                progress_text.write(f"📄 Generating presentation {current_file}/{total_files}")
+                progress_text.write(f"📄 Generating presentation {
+                                    current_file}/{total_files}")
 
     # Crear un ZIP único sin la plantilla ni el Excel
     zip_path = f"{folder_name}.zip"
@@ -137,8 +145,6 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
 
     # Indicar que la generación ha finalizado
     progress_text.write("✅ All presentations have been generated!")
-
-
 
 
 def process_row(presentation_path, row, df1, index, selected_columns, output_folder):
@@ -171,7 +177,8 @@ st.markdown("""
 st.title("Shopfully Dashboard Generator")
 
 # ========= 📂 Upload de archivos con formato mejorado =========
-st.markdown("**Upload PPTX Template**  \n*(Text Box format to edit `{X}`)*", unsafe_allow_html=True)
+st.markdown(
+    "**Upload PPTX Template**  \n*(Text Box format to edit `{X}`)*", unsafe_allow_html=True)
 ppt_template = st.file_uploader("", type=["pptx"])
 
 st.write("")  # Espaciado
@@ -215,7 +222,8 @@ elif st.session_state.search_option == "store_id":
 
 # ========= 📝 Selección de columnas para el nombre del archivo =========
 if data_file is not None:
-    df = pd.read_excel(data_file, sheet_name=0)  # Leer la primera hoja del Excel
+    # Leer la primera hoja del Excel
+    df = pd.read_excel(data_file, sheet_name=0)
     column_names = df.columns.tolist()
 
     selected_columns = st.multiselect(
@@ -226,15 +234,18 @@ if data_file is not None:
 
     def get_filename_from_selection(row, selected_columns):
         """Genera el nombre del archivo según las columnas seleccionadas."""
-        file_name_parts = [str(row[col]) for col in selected_columns if col in row]
+        file_name_parts = [str(row[col])
+                           for col in selected_columns if col in row]
         return "_".join(file_name_parts)
 
-    st.write("🔹 Example file name:", get_filename_from_selection(df.iloc[0], selected_columns))
+    st.write("🔹 Example file name:", get_filename_from_selection(
+        df.iloc[0], selected_columns))
 
 
 # ========= 🚀 Botón de procesamiento =========
 if st.button("Process"):
     if ppt_template and data_file:
-        process_files(ppt_template, data_file, st.session_state.search_option, start_row, end_row, store_ids, selected_columns)
+        process_files(ppt_template, data_file, st.session_state.search_option,
+                      start_row, end_row, store_ids, selected_columns)
     else:
         st.error("Please upload both files before processing.")
