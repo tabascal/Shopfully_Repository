@@ -1,4 +1,8 @@
 import streamlit as st
+import platform
+import img2pdf
+from comtypes import client
+from PIL import Image
 import pandas as pd
 import pptx
 from pptx.dml.color import RGBColor
@@ -11,10 +15,7 @@ import io
 import shutil
 from datetime import datetime
 import re
-import platform
-import img2pdf
-from comtypes import client
-from PIL import Image
+
 
 
 def create_zip_of_presentations(folder_path):
