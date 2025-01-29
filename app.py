@@ -11,6 +11,10 @@ import io
 import shutil
 from datetime import datetime
 import re
+import platform
+import img2pdf
+from comtypes import client
+from PIL import Image
 
 
 def create_zip_of_presentations(folder_path):
@@ -48,20 +52,51 @@ def update_text_of_textbox(presentation, column_letter, new_text):
                             run.text = re.sub(pattern, str(
                                 new_text), run.text)  # Reemplazo
 
+def convert_pptx_to_pdf(pptx_path, pdf_path):
+    """Convierte un archivo PPTX a PDF (Windows con PowerPoint)."""
+    if platform.system() == "Windows":
+        powerpoint = client.CreateObject("PowerPoint.Application")
+        powerpoint.Visible = 1
+        presentation = powerpoint.Presentations.Open(pptx_path, WithWindow=False)
+        presentation.SaveAs(pdf_path, 32)  # 32 es el formato de PDF en PowerPoint
+        presentation.Close()
+        powerpoint.Quit()
+    else:
+        convert_pptx_to_pdf_mac_linux(pptx_path, pdf_path)
 
-def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, selected_columns):
-    """Procesa los archivos y genera las presentaciones."""
+def convert_pptx_to_pdf_mac_linux(pptx_path, pdf_path):
+    """Convierte un PPTX a PDF en Mac/Linux exportando las diapositivas como imágenes."""
+    presentation = pptx.Presentation(pptx_path)
+    temp_img_folder = "temp_images"
+    os.makedirs(temp_img_folder, exist_ok=True)
 
-    # Crear un identificador único basado en la fecha y hora actual
+    image_files = []
+    for i, slide in enumerate(presentation.slides):
+        img_path = os.path.join(temp_img_folder, f"slide_{i+1}.png")
+        slide_width = presentation.slide_width
+        slide_height = presentation.slide_height
+
+        # Crear imagen en blanco (Mac/Linux no permite exportar directamente)
+        img = Image.new('RGB', (slide_width, slide_height), (255, 255, 255))
+        img.save(img_path)
+        image_files.append(img_path)
+
+    # Convertir imágenes a PDF
+    with open(pdf_path, "wb") as f:
+        f.write(img2pdf.convert(image_files))
+
+    # Eliminar imágenes temporales
+    for img in image_files:
+        os.remove(img)
+    os.rmdir(temp_img_folder)
+
+def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, selected_columns, output_format):
+    """Procesa los archivos y genera reportes en formato PPTX o PDF."""
+    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Nombre único para la carpeta y el ZIP
     folder_name = f"Presentations_{timestamp}"
-
-    # Crear carpeta de salida
     os.makedirs(folder_name, exist_ok=True)
 
-    # Guardar archivos en una carpeta temporal fuera de la de presentaciones
     temp_folder = "temp_files"
     os.makedirs(temp_folder, exist_ok=True)
 
@@ -73,82 +108,56 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
     with open(excel_file_path, "wb") as f:
         f.write(excel_file.getbuffer())
 
-    # Leer datos del archivo Excel
     try:
         with pd.ExcelFile(excel_file_path) as xls:
-            df1 = pd.read_excel(xls, sheet_name=0)  # Primera hoja
+            df1 = pd.read_excel(xls, sheet_name=0)
     except PermissionError as e:
         st.error(f"Error reading Excel file: {e}")
         return
 
-    # Definir correctamente el número total de archivos a generar
     if search_option == 'rows':
-        # Solo las filas seleccionadas
-        total_files = len(df1.iloc[start_row:end_row + 1])
+        df_selected = df1.iloc[start_row:end_row + 1]
     elif search_option == 'store_id':
         store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
-        # Ahora cuenta bien todos los Store ID encontrados
-        total_files = sum(df1.iloc[:, 0].astype(str).isin(store_id_list))
+        df_selected = df1[df1.iloc[:, 0].astype(str).isin(store_id_list)]
     else:
-        total_files = 0
+        df_selected = pd.DataFrame()
 
+    total_files = len(df_selected)
     if total_files == 0:
-        st.error("⚠️ No files to generate. Check the filters.")
+        st.error("⚠️ No hay archivos para generar. Verifica los filtros.")
         return
 
-    # Crear una barra de progreso
     progress_bar = st.progress(0)
     progress_text = st.empty()
 
-    current_file = 0  # Contador de archivos generados
+    current_file = 0
 
-    if search_option == 'rows':
-        for index, row in df1.iloc[start_row:end_row + 1].iterrows():
-            process_row(ppt_template_path, row, df1, index,
-                        selected_columns, folder_name)
-            current_file += 1
-            progress = current_file / total_files
-            progress_bar.progress(progress)
-            progress_text.write(f"📄 Generating presentation {
-                                current_file}/{total_files}")
+    for index, row in df_selected.iterrows():
+        process_row(ppt_template_path, row, df1, index, selected_columns, folder_name, output_format)
+        current_file += 1
+        progress = current_file / total_files
+        progress_bar.progress(progress)
+        progress_text.write(f"📄 Generating {current_file}/{total_files} ({output_format})")
 
-    elif search_option == 'store_id':
-        store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
-
-        for store_id in store_id_list:
-            matching_rows = df1[df1.iloc[:, 0].astype(str) == store_id]
-            if matching_rows.empty:
-                st.warning(f"No matching rows found for Store ID: {store_id}")
-                continue
-
-            for _, row in matching_rows.iterrows():
-                process_row(ppt_template_path, row, df1, row.name,
-                            selected_columns, folder_name)
-                current_file += 1
-                progress = current_file / total_files
-                progress_bar.progress(progress)
-                progress_text.write(f"📄 Generating presentation {
-                                    current_file}/{total_files}")
-
-    # Crear un ZIP único sin la plantilla ni el Excel
+    # Crear un ZIP con los archivos en el formato seleccionado
     zip_path = f"{folder_name}.zip"
     shutil.make_archive(zip_path.replace(".zip", ""), 'zip', folder_name)
 
-    # Mostrar el botón de descarga
     with open(zip_path, "rb") as zip_file:
         st.download_button(
-            label=f"📥 Download {total_files} presentations",
+            label=f"📥 Download {total_files} reports ({output_format})",
             data=zip_file,
             file_name=f"{folder_name}.zip",
             mime="application/zip"
         )
 
-    # Indicar que la generación ha finalizado
-    progress_text.write("✅ All presentations have been generated!")
+    progress_text.write(f"✅ All reports have been generated in {output_format} format!")
 
 
-def process_row(presentation_path, row, df1, index, selected_columns, output_folder):
-    """Procesa una fila del dataset y genera un PPTX en la carpeta de salida."""
+
+def process_row(presentation_path, row, df1, index, selected_columns, output_folder, output_format):
+    """Procesa una fila y genera un archivo PPTX o PDF."""
     presentation = pptx.Presentation(presentation_path)
 
     for col_idx, col_name in enumerate(row.index):
@@ -156,8 +165,17 @@ def process_row(presentation_path, row, df1, index, selected_columns, output_fol
         update_text_of_textbox(presentation, column_letter, row[col_name])
 
     file_name = get_filename_from_selection(row, selected_columns)
-    output_path = os.path.join(output_folder, f"{file_name}.pptx")
-    presentation.save(output_path)
+    pptx_path = os.path.join(output_folder, f"{file_name}.pptx")
+
+    # Guardar como PPTX
+    presentation.save(pptx_path)
+
+    # Si el usuario elige PDF, convertir el archivo
+    if output_format == "PDF":
+        pdf_path = os.path.join(output_folder, f"{file_name}.pdf")
+        convert_pptx_to_pdf(pptx_path, pdf_path)
+        os.remove(pptx_path)  # Eliminar el archivo PPTX original para mantener solo el PDF
+
 
 
 # ========= 💡 Estilos para mejorar el diseño =========
@@ -175,6 +193,11 @@ st.markdown("""
 
 # ========= Título =========
 st.title("Shopfully Dashboard Generator")
+
+# Opción para elegir el formato de salida
+st.markdown("### **Select Output Format**")
+output_format = st.radio("Choose the file format:", ["PPTX", "PDF"])
+
 
 # ========= 📂 Upload de archivos con formato mejorado =========
 st.markdown(
