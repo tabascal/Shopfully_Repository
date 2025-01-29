@@ -1,8 +1,4 @@
 import streamlit as st
-import platform
-import img2pdf
-from comtypes import client
-from PIL import Image
 import pandas as pd
 import pptx
 from pptx.dml.color import RGBColor
@@ -15,7 +11,14 @@ import io
 import shutil
 from datetime import datetime
 import re
+import subprocess
 
+def convert_pptx_to_pdf(pptx_path, pdf_path):
+    """Convierte un archivo PPTX a PDF en Linux usando LibreOffice (funciona en Streamlit Cloud)."""
+    try:
+        subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", pptx_path, "--outdir", os.path.dirname(pdf_path)], check=True)
+    except Exception as e:
+        print(f"Error converting {pptx_path} to PDF: {e}")
 
 
 def create_zip_of_presentations(folder_path):
@@ -53,46 +56,11 @@ def update_text_of_textbox(presentation, column_letter, new_text):
                             run.text = re.sub(pattern, str(
                                 new_text), run.text)  # Reemplazo
 
-def convert_pptx_to_pdf(pptx_path, pdf_path):
-    """Convierte un archivo PPTX a PDF (Windows con PowerPoint)."""
-    if platform.system() == "Windows":
-        powerpoint = client.CreateObject("PowerPoint.Application")
-        powerpoint.Visible = 1
-        presentation = powerpoint.Presentations.Open(pptx_path, WithWindow=False)
-        presentation.SaveAs(pdf_path, 32)  # 32 es el formato de PDF en PowerPoint
-        presentation.Close()
-        powerpoint.Quit()
-    else:
-        convert_pptx_to_pdf_mac_linux(pptx_path, pdf_path)
 
-def convert_pptx_to_pdf_mac_linux(pptx_path, pdf_path):
-    """Convierte un PPTX a PDF en Mac/Linux exportando las diapositivas como imágenes."""
-    presentation = pptx.Presentation(pptx_path)
-    temp_img_folder = "temp_images"
-    os.makedirs(temp_img_folder, exist_ok=True)
 
-    image_files = []
-    for i, slide in enumerate(presentation.slides):
-        img_path = os.path.join(temp_img_folder, f"slide_{i+1}.png")
-        slide_width = presentation.slide_width
-        slide_height = presentation.slide_height
-
-        # Crear imagen en blanco (Mac/Linux no permite exportar directamente)
-        img = Image.new('RGB', (slide_width, slide_height), (255, 255, 255))
-        img.save(img_path)
-        image_files.append(img_path)
-
-    # Convertir imágenes a PDF
-    with open(pdf_path, "wb") as f:
-        f.write(img2pdf.convert(image_files))
-
-    # Eliminar imágenes temporales
-    for img in image_files:
-        os.remove(img)
-    os.rmdir(temp_img_folder)
 
 def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, selected_columns, output_format):
-    """Procesa los archivos y genera reportes en formato PPTX o PDF."""
+    """Genera reportes en formato PPTX o PDF en Streamlit Cloud con aviso de tiempos estimados."""
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     folder_name = f"Presentations_{timestamp}"
@@ -129,17 +97,23 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
         st.error("⚠️ No hay archivos para generar. Verifica los filtros.")
         return
 
+    # 🔹 Aviso de tiempo estimado según el formato elegido
+    estimated_time = total_files * (5 if output_format == "PDF" else 1)
+    st.info(f"⏳ Estimated time: ~{estimated_time} seconds")
+
     progress_bar = st.progress(0)
     progress_text = st.empty()
 
     current_file = 0
+    start_time = time.time()
 
     for index, row in df_selected.iterrows():
         process_row(ppt_template_path, row, df1, index, selected_columns, folder_name, output_format)
         current_file += 1
         progress = current_file / total_files
         progress_bar.progress(progress)
-        progress_text.write(f"📄 Generating {current_file}/{total_files} ({output_format})")
+        elapsed_time = time.time() - start_time
+        progress_text.write(f"📄 Generating {current_file}/{total_files} ({output_format}) - Elapsed time: {int(elapsed_time)}s")
 
     # Crear un ZIP con los archivos en el formato seleccionado
     zip_path = f"{folder_name}.zip"
@@ -153,12 +127,12 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
             mime="application/zip"
         )
 
-    progress_text.write(f"✅ All reports have been generated in {output_format} format!")
+    progress_text.write(f"✅ All reports have been generated in {output_format} format! Total time: {int(time.time() - start_time)}s")
 
 
 
 def process_row(presentation_path, row, df1, index, selected_columns, output_folder, output_format):
-    """Procesa una fila y genera un archivo PPTX o PDF."""
+    """Procesa una fila y genera un archivo PPTX o PDF en Streamlit Cloud."""
     presentation = pptx.Presentation(presentation_path)
 
     for col_idx, col_name in enumerate(row.index):
@@ -175,7 +149,7 @@ def process_row(presentation_path, row, df1, index, selected_columns, output_fol
     if output_format == "PDF":
         pdf_path = os.path.join(output_folder, f"{file_name}.pdf")
         convert_pptx_to_pdf(pptx_path, pdf_path)
-        os.remove(pptx_path)  # Eliminar el archivo PPTX original para mantener solo el PDF
+        os.remove(pptx_path)  # Eliminar el PPTX original para solo guardar el PDF
 
 
 
@@ -198,6 +172,11 @@ st.title("Shopfully Dashboard Generator")
 # Opción para elegir el formato de salida
 st.markdown("### **Select Output Format**")
 output_format = st.radio("Choose the file format:", ["PPTX", "PDF"])
+
+# Mensaje de advertencia si el usuario elige PDF
+if output_format == "PDF":
+    st.warning("⚠️ Converting to PDF may take extra time. Large batches of presentations might take several minutes.")
+
 
 
 # ========= 📂 Upload de archivos con formato mejorado =========
