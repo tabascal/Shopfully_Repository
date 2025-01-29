@@ -3,3 +3,4 @@ pandas
 python-pptx
 openpyxl
 img2pdf
+comtypes
