@@ -249,15 +249,6 @@ if data_file is not None:
 # ========= 🚀 Botón de procesamiento =========
 if st.button("Process"):
     if ppt_template and data_file:
-        # Debug statements to check the values and types of variables
-        st.write("ppt_template:", type(ppt_template), ppt_template)
-        st.write("data_file:", type(data_file), data_file)
-        st.write("search_option:", type(st.session_state.search_option), st.session_state.search_option)
-        st.write("start_row:", type(start_row), start_row)
-        st.write("end_row:", type(end_row), end_row)
-        st.write("store_ids:", type(store_ids), store_ids)
-        st.write("selected_columns:", type(selected_columns), selected_columns)
-        
         process_files(ppt_template, data_file, st.session_state.search_option,
                       start_row, end_row, store_ids, selected_columns)
     else:
