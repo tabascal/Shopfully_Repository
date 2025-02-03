@@ -17,7 +17,7 @@ import ssl
 from email.message import EmailMessage
 import requests
 
-MAILCHIMP_TRANSACTIONAL_API_KEY = "md-gGn54C-NpBsbZgty2NIwUA"
+MAILCHIMP_TRANSACTIONAL_API_KEY = "hello"
 
 def send_email_mailchimp(receiver_email, subject, body, attachment_path=None):
     """Envía un correo con la API de Mailchimp Transactional (Mandrill)."""
