@@ -15,6 +15,35 @@ import subprocess
 import smtplib
 import ssl
 from email.message import EmailMessage
+import requests
+
+MAILCHIMP_API_KEY = "TU_API_KEY_AQUI"
+MAILCHIMP_SERVER_PREFIX = "us21"  # Cambia esto según tu cuenta
+MAILCHIMP_AUDIENCE_ID = "TU_LIST_ID_AQUI"
+
+def send_email_mailchimp(receiver_email, subject, body):
+    """Envía un correo usando la API de Mailchimp."""
+    url = f"https://{MAILCHIMP_SERVER_PREFIX}.api.mailchimp.com/3.0/messages"
+    
+    headers = {
+        "Authorization": f"Bearer {MAILCHIMP_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "from_email": "tu_correo@mailchimp.com",
+        "subject": subject,
+        "content": [{"type": "text/plain", "value": body}],
+        "recipients": [{"email": receiver_email}]
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    
+    if response.status_code == 200:
+        print(f"✅ Email sent to {receiver_email}")
+    else:
+        print(f"❌ Failed to send email to {receiver_email}: {response.text}")
+
 
 def send_email(receiver_email, zip_file_path, subject, body, sender_email, sender_password):
     """Envía un correo con el ZIP adjunto."""
@@ -87,82 +116,50 @@ def update_text_of_textbox(presentation, column_letter, new_text):
 
 
 
-def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, selected_columns, output_format, sender_email=None, sender_password=None):
-    """Genera reportes en formato PPTX o PDF y opcionalmente los envía por correo."""
-
+def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, selected_columns, output_format, use_mailchimp):
+    """Genera reportes y envía emails usando Mailchimp si está activado."""
+    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     folder_name = f"Presentations_{timestamp}"
     os.makedirs(folder_name, exist_ok=True)
 
-    temp_folder = "temp_files"
-    os.makedirs(temp_folder, exist_ok=True)
-
-    ppt_template_path = os.path.join(temp_folder, ppt_file.name)
-    excel_file_path = os.path.join(temp_folder, excel_file.name)
+    ppt_template_path = os.path.join(folder_name, ppt_file.name)
+    excel_file_path = os.path.join(folder_name, excel_file.name)
 
     with open(ppt_template_path, "wb") as f:
         f.write(ppt_file.getbuffer())
     with open(excel_file_path, "wb") as f:
         f.write(excel_file.getbuffer())
 
-    try:
-        with pd.ExcelFile(excel_file_path) as xls:
-            df1 = pd.read_excel(xls, sheet_name=0)
-    except PermissionError as e:
-        st.error(f"Error reading Excel file: {e}")
-        return
-
-    if search_option == 'rows':
-        df_selected = df1.iloc[start_row:end_row + 1]
-    elif search_option == 'store_id':
-        store_id_list = [store_id.strip() for store_id in store_ids.split(',')]
-        df_selected = df1[df1.iloc[:, 0].astype(str).isin(store_id_list)]
-    else:
-        df_selected = pd.DataFrame()
-
-    total_files = len(df_selected)
-    if total_files == 0:
-        st.error("⚠️ No files to generate. Check filters.")
-        return
+    df = pd.read_excel(excel_file_path, sheet_name=0)
+    total_files = len(df)
 
     progress_bar = st.progress(0)
     progress_text = st.empty()
 
-    current_file = 0
-    email_sent_count = 0
+    for index, row in df.iterrows():
+        email = row["Email"] if "Email" in df.columns else None
+        if not email:
+            st.warning(f"No email found for row {index}, skipping...")
+            continue
 
-    for index, row in df_selected.iterrows():
-        process_row(ppt_template_path, row, df1, index, selected_columns, folder_name, output_format)
-        current_file += 1
-        progress = current_file / total_files
-        progress_bar.progress(progress)
-        progress_text.write(f"📄 Generating {current_file}/{total_files} ({output_format})")
+        process_row(ppt_template_path, row, df, index, selected_columns, folder_name, output_format)
+        
+        if use_mailchimp:
+            send_email_mailchimp(email, "Your Report is Ready", "Please find your report attached.")
 
-    # Crear el ZIP después de generar todos los archivos
     zip_path = f"{folder_name}.zip"
     shutil.make_archive(zip_path.replace(".zip", ""), 'zip', folder_name)
 
-    # 🔹 Solo enviar emails si el usuario seleccionó la opción
-    if sender_email and sender_password:
-        if os.path.exists(zip_path):
-            for index, row in df_selected.iterrows():
-                email = row["Email"] if "Email" in df_selected.columns else None
-                if email:
-                    send_email(email, zip_path, "Your Report is Ready", "Please find your report attached.", sender_email, sender_password)
-                    email_sent_count += 1
+    with open(zip_path, "rb") as zip_file:
+        st.download_button(
+            label=f"📥 Download {total_files} reports ({output_format})",
+            data=zip_file,
+            file_name=f"{folder_name}.zip",
+            mime="application/zip"
+        )
 
-        progress_text.write(f"✅ {email_sent_count}/{total_files} emails sent successfully!")
-    else:
-        # 🔹 Si no se envían correos, mostrar el botón de descarga
-        with open(zip_path, "rb") as zip_file:
-            st.download_button(
-                label=f"📥 Download {total_files} reports ({output_format})",
-                data=zip_file,
-                file_name=f"{folder_name}.zip",
-                mime="application/zip"
-            )
-
-        progress_text.write(f"✅ All reports have been generated in {output_format} format!")
+    st.success("✅ All reports have been generated and emails sent!")
 
 
 
@@ -288,12 +285,13 @@ sender_email = st.text_input("📧 Your Email (Gmail or Outlook)")
 sender_password = st.text_input("🔑 Your Email Password", type="password")
 send_email_option = st.checkbox("📩 Send reports via email")
 
-if st.button("Process & Send Emails" if send_email_option else "Process"):
+use_mailchimp = st.checkbox("📩 Send reports via Mailchimp")
+
+if st.button("Process & Send Emails" if use_mailchimp else "Process"):
     if ppt_template and data_file:
-        email = sender_email if send_email_option else None
-        password = sender_password if send_email_option else None
-        process_files(ppt_template, data_file, st.session_state.search_option, start_row, end_row, store_ids, selected_columns, output_format, email, password)
+        process_files(ppt_template, data_file, st.session_state.search_option, start_row, end_row, store_ids, selected_columns, output_format, use_mailchimp)
     else:
-        st.error("Please upload both files before processing.")
+        st.error("Please upload files before processing.")
+
 
 
