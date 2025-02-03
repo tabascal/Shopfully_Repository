@@ -17,28 +17,42 @@ import ssl
 from email.message import EmailMessage
 import requests
 
-MAILCHIMP_API_KEY = "TU_API_KEY_AQUI"
-MAILCHIMP_SERVER_PREFIX = "us21"  # Cambia esto según tu cuenta
-MAILCHIMP_AUDIENCE_ID = "TU_LIST_ID_AQUI"
+MAILCHIMP_TRANSACTIONAL_API_KEY = "md-gGn54C-NpBsbZgty2NIwUA"
 
-def send_email_mailchimp(receiver_email, subject, body):
-    """Envía un correo usando la API de Mailchimp."""
-    url = f"https://{MAILCHIMP_SERVER_PREFIX}.api.mailchimp.com/3.0/messages"
+def send_email_mailchimp(receiver_email, subject, body, attachment_path=None):
+    """Envía un correo con la API de Mailchimp Transactional (Mandrill)."""
+
+    url = "https://mandrillapp.com/api/1.0/messages/send.json"
     
     headers = {
-        "Authorization": f"Bearer {MAILCHIMP_API_KEY}",
         "Content-Type": "application/json"
     }
-    
+
+    # Datos del email
     data = {
-        "from_email": "tu_correo@mailchimp.com",
-        "subject": subject,
-        "content": [{"type": "text/plain", "value": body}],
-        "recipients": [{"email": receiver_email}]
+        "key": MAILCHIMP_TRANSACTIONAL_API_KEY,
+        "message": {
+            "from_email": "t.abascal@shopfully.com",
+            "to": [{"email": receiver_email, "type": "to"}],
+            "subject": subject,
+            "text": body
+        }
     }
 
+    # 🔹 Adjuntar ZIP si existe
+    if attachment_path:
+        with open(attachment_path, "rb") as f:
+            attachment_content = f.read()
+        
+        data["message"]["attachments"] = [{
+            "type": "application/zip",
+            "name": os.path.basename(attachment_path),
+            "content": attachment_content.decode("latin1")  # Convierte el binario en texto base64
+        }]
+
+    # 🔹 Enviar la solicitud a Mailchimp Transactional
     response = requests.post(url, json=data, headers=headers)
-    
+
     if response.status_code == 200:
         print(f"✅ Email sent to {receiver_email}")
     else:
@@ -117,7 +131,7 @@ def update_text_of_textbox(presentation, column_letter, new_text):
 
 
 def process_files(ppt_file, excel_file, search_option, start_row, end_row, store_ids, selected_columns, output_format, use_mailchimp):
-    """Genera reportes y envía emails usando Mailchimp si está activado."""
+    """Genera reportes y envía emails usando Mailchimp Transactional si está activado."""
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     folder_name = f"Presentations_{timestamp}"
@@ -132,25 +146,37 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
         f.write(excel_file.getbuffer())
 
     df = pd.read_excel(excel_file_path, sheet_name=0)
-    total_files = len(df)
 
+    if "Email" not in df.columns:
+        st.error("❌ The column 'Email' is missing in the Excel file.")
+        return
+
+    total_files = len(df)
     progress_bar = st.progress(0)
     progress_text = st.empty()
 
     for index, row in df.iterrows():
-        email = row["Email"] if "Email" in df.columns else None
+        email = row["Email"] if pd.notna(row["Email"]) else None
         if not email:
-            st.warning(f"No email found for row {index}, skipping...")
+            st.warning(f"⚠️ No email found for row {index}, skipping...")
             continue
 
         process_row(ppt_template_path, row, df, index, selected_columns, folder_name, output_format)
-        
+
         if use_mailchimp:
             send_email_mailchimp(email, "Your Report is Ready", "Please find your report attached.")
 
+    # 🔹 Crear y enviar ZIP con Mailchimp
     zip_path = f"{folder_name}.zip"
     shutil.make_archive(zip_path.replace(".zip", ""), 'zip', folder_name)
 
+    if use_mailchimp:
+        for index, row in df.iterrows():
+            email = row["Email"] if pd.notna(row["Email"]) else None
+            if email:
+                send_email_mailchimp(email, "Your Reports Are Ready", "Please find your reports attached.", zip_path)
+
+    # 🔹 Botón de descarga del ZIP si no se usa Mailchimp
     with open(zip_path, "rb") as zip_file:
         st.download_button(
             label=f"📥 Download {total_files} reports ({output_format})",
@@ -160,7 +186,6 @@ def process_files(ppt_file, excel_file, search_option, start_row, end_row, store
         )
 
     st.success("✅ All reports have been generated and emails sent!")
-
 
 
 
